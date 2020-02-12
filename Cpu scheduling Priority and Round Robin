@@ -1,0 +1,633 @@
+
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
+
+
+
+typedef struct
+{
+	char pid[10];
+	int at;
+	int bt;
+	int wt;
+	int tt;
+	int rt;
+	int priority;
+	int temp;
+}process;
+
+typedef struct
+{
+	int pno;
+	process *p;
+	float avg_wt;
+	float avg_tt;
+	float avg_rt;
+	int last_temp;	
+	int *check;
+	int *inq;
+}job;
+
+struct cqueue
+{
+	int front,rear,capacity,size;
+	process *a;
+};
+
+job * initialize(job *a,int n)
+{
+	a=(job*)malloc(sizeof(job));
+	a->pno=n;
+	a->p=(process*)malloc(sizeof(process)*n);
+	a->check=(int*)malloc(sizeof(int)*n);
+	a->inq=(int*)malloc(sizeof(int)*n);
+	int i;
+	return a;
+}
+
+struct cqueue* cinitialize(struct cqueue *q,int x)
+{
+	q=(struct cqueue *)malloc(sizeof(struct cqueue));
+	q->front=-1;
+	q->rear=-1;
+	q->capacity=x;
+	q->size=0;
+	q->a=(process*)malloc(sizeof(process)*x);
+	return q;
+}
+
+int cisFull(struct cqueue *q)
+{
+	if(q->size==q->capacity)
+		return 1;
+	else
+		return 0;
+}
+
+int cisEmpty(struct cqueue *q)
+{
+	if(q->size==0)
+		return 1;
+	else
+		return 0;
+}
+
+void cenqueue(struct cqueue *q,process x)
+{
+ 	if(cisFull(q))
+	{
+		printf("Queue is full\n");
+	}
+	else
+	{
+		
+		q->rear=(q->rear+1)%(q->capacity);
+		q->a[q->rear]=x;
+		q->size+=1;
+	}
+}
+
+process* cdequeue(struct cqueue *q)
+{
+	if(cisEmpty(q))
+	{
+		printf("Queue is Empty\n");
+		return 0;
+	}
+	else
+	{
+		q->front=(q->front+1)%(q->capacity);
+		q->size-=1;
+		return &(q->a[q->front]);
+	}
+}
+
+job* sort(job* a)
+{
+	int i,j;
+	process temp;
+	for(i=0;i<a->pno-1;i++)
+	{
+		for(j=i+1;j<a->pno;j++)
+		{
+			if(a->p[i].at>a->p[j].at)
+			{
+				temp=a->p[i];
+				a->p[i]=a->p[j];
+				a->p[j]=temp;
+			}
+		}
+	}
+	return a;
+}
+
+job* sortpid(job* a)
+{
+	int i,j;
+	process temp;
+	for(i=0;i<a->pno-1;i++)
+	{
+		for(j=i+1;j<a->pno;j++)
+		{
+			if(strcmp(a->p[i].pid,a->p[j].pid)>0)
+			{
+				temp=a->p[i];
+				a->p[i]=a->p[j];
+				a->p[j]=temp;
+			}
+		}
+	}
+	return a;
+}
+
+job* sortbt(job* a)
+{
+	int i,j;
+	process temp;
+	for(i=0;i<a->pno-1;i++)
+	{
+		for(j=i+1;j<a->pno;j++)
+		{
+			if(a->p[i].bt>a->p[j].bt)
+			{
+				temp=a->p[i];
+				a->p[i]=a->p[j];
+				a->p[j]=temp;
+			}
+		}
+	}
+	return a;
+}
+
+void display(job* a)
+{
+	int i;
+	printf("\n\nProcess Id \t Arival Time \tBurst Time \tPriority \t Waiting Time \tTurnaround Time    Response Time\n");
+	for(i=0;i<a->pno;i++)
+	{	
+		printf("     %s \t     %d \t\t     %d \t\t     %d \t\t      %d \t      %d \t\t    %d \t\t\n",a->p[i].pid,a->p[i].at,a->p[i].bt,a->p[i].priority,a->p[i].wt,a->p[i].tt,a->p[i].rt);
+	}
+	printf("\n        \t\t      \t\t               Average    %f       %f        %f",a->avg_wt,a->avg_tt,a->avg_rt);
+}
+
+void ganttchart(job *a)
+{
+	printf("\n\t\t\tGantt Chart\n\n");
+	int i;
+	int length = (14*a->pno)+a->pno;
+	printf("\t\t");
+	for(i=0;i<length+1;i++)
+	{
+		printf("-");
+	}
+	printf("\n\t\t");
+	int place,k=0;
+	for(i=0;i<length;i++)
+	{
+		if(i%14==0)
+		{
+			place=0;
+			printf("|");
+		}
+		else
+		{
+			place++;
+			if(place==6 && k<a->pno)
+			{
+				printf("%s ",a->p[k].pid);
+				k++;
+			}
+			else if(place>7 || place<6)
+				printf(" ");
+		}	
+	}
+	printf("\n\t\t");
+	for(i=0;i<length+1;i++)
+	{
+		printf("-");
+	}
+	
+	int j;
+	printf("\n\t\t");
+	for(i=0;i<a->pno;i++)
+	{
+		for(j=0;j<15;j++)
+			if(j==0)
+				printf("%d",a->p[i].temp);
+			else	
+				printf(" ");
+	}
+	printf("%d",a->last_temp);
+}
+
+
+
+int priorityjobnp(job *a,int tempbt)
+{	
+	int i=0;
+	int minpr;
+	int minat;
+	int index;
+	for(i=0;i<a->pno;i++)
+	{
+		if(a->check[i]==0)
+		{
+			minat=a->p[i].at;
+			minpr=a->p[i].priority;
+			index=i;
+			break;
+		}
+	}	
+	minat=tempbt;
+	for(i=0;i<a->pno;i++)
+	{
+		if((a->p[i].at<=minat) && (a->p[i].priority<minpr) && (a->check[i]==0))
+		{
+			minpr=a->p[i].priority;
+			index=i;	
+		}
+	}
+	a->check[index]=1;
+	return index;
+}
+
+void prioritynp(job* a)
+{
+	a=sort(a);
+	job *b;
+	int tempbt=0;
+	b=initialize(b,a->pno);
+	int i;
+	int index=0;
+	for(i=0;i<a->pno;i++)
+	{
+		a->check[i]=0;
+	}
+	int time=0;
+	int x=0,y=0,z=0;
+	while(time<a->pno)
+	{
+		
+		index=priorityjobnp(a,tempbt);
+		tempbt+=a->p[index].bt;
+		
+		if(time==0)
+		{
+			a->p[index].wt=0;
+			a->p[index].temp=a->p[index].at;
+		}
+		else
+		{
+			a->p[index].temp=tempbt-a->p[index].bt;
+			a->p[index].wt=a->p[index].temp-a->p[index].at;
+		}
+		a->p[index].rt=a->p[index].wt;
+		a->p[index].tt=a->p[index].wt+a->p[index].bt;
+		b->p[time]=a->p[index];
+		x+=a->p[index].wt;
+		y+=a->p[index].tt;
+		z+=a->p[index].rt;
+		time++;
+	}
+	b->last_temp=b->p[time-1].temp+b->p[time-1].bt;
+	b->avg_wt=(float)(x)/(float)(b->pno);
+	b->avg_tt=(float)(y)/(float)(b->pno);
+	b->avg_rt=(float)(z)/(float)(b->pno);
+	ganttchart(b);
+	b=sortpid(b);
+	display(b);	
+}
+
+int complete(job *a)
+{
+	int i,flag=0;
+	for(i=0;i<a->pno;i++)
+	{
+		if(a->check[i]==0)
+			flag=1;
+			break;
+	}
+	if(flag==1)
+		return 0;
+	else
+		return 1;
+}	
+
+int priorityJobp(job *a,int tempbt)
+{	
+	int i=0;
+	int minpr;
+	int minat;
+	int index;
+	for(i=0;i<a->pno;i++)
+	{
+		if(a->check[i]==0)
+		{
+			minpr=a->p[i].priority;
+			index=i;
+			break;
+		}
+	}	
+	minat=tempbt;
+	for(i=0;i<a->pno;i++)
+	{
+		if((a->p[i].at<=minat) && (a->p[i].priority<minpr) && (a->check[i]==0))
+		{
+			minpr=a->p[i].priority;
+			index=i;	
+		}
+	}
+	return index;
+}
+
+int indexof(job* a,char *id)
+{
+	int i;
+	int flag=0;
+	for(i=0;i<a->pno;i++)
+	{
+		if(strcmp(id,a->p[i].pid)==0 && a->check[i]!=1)
+		{
+			flag=1;
+			a->check[i]=1;
+			break;
+		}
+	}
+	if(flag==1)
+		return i;
+	else	
+		return -1;
+}
+
+void priorityp(job *a)
+{
+	a=sort(a);
+	job *b,*t;
+	t=initialize(t,a->pno);
+	int tempbt=0;
+	b=initialize(b,a->pno*2);
+	int i;
+	int index=0;
+	int preindex=-1;
+	for(i=0;i<a->pno;i++)
+		t->p[i]=a->p[i];
+	t->pno=a->pno;
+	for(i=0;i<a->pno;i++)
+	{
+		a->check[i]=0;
+	}
+	int time=0;
+	for(i=0;i<a->pno;i++)
+		time+=a->p[i].bt;
+	int x=0,y=0,z=0;
+	int j=-1;
+	int ti=0;
+	for(i=0;i<time;i++)
+	{
+		index=priorityJobp(a,tempbt);
+		if(index!=preindex)
+		{
+			j++;
+			b->p[j]=t->p[index];
+			b->p[j].temp=i;	
+		}
+		a->p[index].bt-=1;
+		if(a->p[index].bt==0)
+		{
+			a->check[index]=1;
+		}
+		
+		tempbt+=1;
+		preindex=index;
+		ti++;
+	}
+	
+	b->last_temp=time;
+	b->pno=j+1;
+	t=sortpid(t);
+	for(i=0;i<b->pno;i++)
+	{
+		b->check[i]=0;
+	}
+	int tempindex;
+	for(i=0;i<t->pno;i++)
+	{
+		tempindex=indexof(b,t->p[i].pid);
+		int lasttempindex=tempindex;
+		b->check[tempindex]=1;
+		t->p[i].wt=b->p[tempindex].temp-t->p[i].at;
+		
+		t->p[i].rt=b->p[tempindex].temp-t->p[i].at;
+		
+		while(1)
+		{
+			tempindex=indexof(b,t->p[i].pid);
+			if(tempindex!=-1)
+				t->p[i].wt+=b->p[tempindex].temp-b->p[lasttempindex+1].temp;
+			else
+				break;
+			lasttempindex=tempindex;
+		}
+
+		t->p[i].tt=t->p[i].bt+t->p[i].wt;
+		
+	}
+	for(i=0;i<t->pno;i++)
+	{
+		x+=t->p[i].wt;
+		z+=t->p[i].rt;
+		y+=t->p[i].tt;
+	}
+	t->avg_wt=(float)(x)/(float)(a->pno);
+	t->avg_tt=(float)(y)/(float)(a->pno);
+	t->avg_rt=(float)(z)/(float)(a->pno);
+	ganttchart(b);
+	display(t);
+}
+
+void roundrobin(job *a,int q)
+{
+	a=sort(a);
+	job *b,*t;
+	t=initialize(t,a->pno);
+	int tempbt=0;
+	b=initialize(b,a->pno*4);
+	int i,j;
+	int index=0;
+	int preindex=-1;
+	for(i=0;i<a->pno;i++)
+		t->p[i]=a->p[i];
+	t->pno=a->pno;
+	for(i=0;i<a->pno;i++)
+	{
+		a->check[i]=0;
+		a->inq[i]=0;
+	}
+	int x=0,y=0,z=0;
+	
+	struct cqueue* queue;
+	queue=cinitialize(queue,a->pno*2);	
+	int minat=a->p[0].at;
+	for(i=0;i<a->pno;i++)
+	{	
+		if(a->p[i].at==minat && a->check[i]!=1 && a->inq[i]!=1)
+		{	
+			printf("1\n");
+			cenqueue(queue,a->p[i]);
+			a->inq[i]=1;
+		}
+	}
+	j=0;
+	
+	while(!cisEmpty(queue))
+	{
+		int tempq=q;
+		process *t;
+		t=cdequeue(queue);
+		if(tempbt==0)
+			t->temp=a->p[0].at;
+		else
+			t->temp=tempbt;
+		for(i=0;i<tempq;i++)
+		{
+			if(t->bt!=0)
+			{
+				t->bt--;
+				tempbt++;
+			}
+			else
+				break;
+		}
+		b->p[j]=*t;
+		j++;
+		minat=tempbt;
+		for(i=0;i<a->pno;i++)
+		{	
+			if(a->p[i].at<=minat && a->check[i]!=1 && a->inq[i]!=1)
+			{
+				cenqueue(queue,a->p[i]);
+				a->inq[i]=1;
+			}
+		}
+		if(t->bt!=0)
+			cenqueue(queue,*t);
+	}	
+	b->last_temp=tempbt;	
+	b->pno=j+1;
+	t=sortpid(t);
+	for(i=0;i<b->pno;i++)
+	{
+		b->check[i]=0;
+	}
+	int tempindex;
+	for(i=0;i<t->pno;i++)
+	{
+		tempindex=indexof(b,t->p[i].pid);
+		int lasttempindex=tempindex;
+		b->check[tempindex]=1;
+		t->p[i].wt=b->p[tempindex].temp-t->p[i].at;
+		
+		t->p[i].rt=b->p[tempindex].temp-t->p[i].at;
+		
+		while(1)
+		{
+			tempindex=indexof(b,t->p[i].pid);
+			if(tempindex!=-1)
+				t->p[i].wt+=b->p[tempindex].temp-b->p[lasttempindex+1].temp;
+			else
+				break;
+			lasttempindex=tempindex;
+		}
+
+		t->p[i].tt=t->p[i].bt+t->p[i].wt;
+		
+	}
+	
+	for(i=0;i<t->pno;i++)
+	{
+		x+=t->p[i].wt;
+		y+=t->p[i].tt;
+		z+=t->p[i].rt;
+	}
+
+	t->avg_wt=(float)(x)/(float)(a->pno);
+	t->avg_tt=(float)(y)/(float)(a->pno);
+	t->avg_rt=(float)(z)/(float)(a->pno);
+	b->pno--;
+	ganttchart(b);
+	display(t);
+}
+
+
+void main()
+{
+	int n;
+	printf("Enter No. of process :");
+	scanf("%d",&n);
+	
+	job *a;
+	a=initialize(a,n);
+	int i;
+	for(i=0;i<n;i++)
+	{
+		printf("\nEnter process %d's:\n",i+1);
+		printf("Id           : ");
+		scanf("%s",a->p[i].pid);
+	
+		printf("Arrival Time : ");
+		scanf("%d",&a->p[i].at);
+
+		printf("Burst Time   : ");
+		scanf("%d",&a->p[i].bt);	
+
+		printf("Priority     : ");
+		scanf("%d",&a->p[i].priority);	
+	}
+	
+	int ch=1;
+	while(ch!=0)
+	{
+		printf("\nEnter\n1.Priority (non-preemptive)\n2.Priority (preemptive)\n3.Round Robin\n0.Exit\n");
+		scanf("%d",&ch);
+		job *b;
+		b=initialize(b,n);
+		for(i=0;i<n;i++)
+		{
+			b->p[i]=a->p[i];
+		}
+		switch(ch)
+		{
+			case 1:
+			{
+				prioritynp(b);
+				break;	
+			}
+
+			case 2:	
+			{
+				priorityp(b);
+				break;	
+			}
+
+			case 3:
+			{
+				int q;
+				printf("Enter quantum value : ");
+				scanf("%d",&q);
+				roundrobin(b,q);
+				break;	
+			}
+			case 4:
+			{
+				printf("******Thank You*******\n");
+				break;
+			}
+
+			default:
+				printf("Invalid choice\n");
+				
+		}
+	}
+}	
+
